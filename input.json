@@ -1,0 +1,46 @@
+{
+    "RemoteMachineAddress": "van-wnt-vm.simba.ad",
+    "Source": {
+        "Core": [
+            {
+                "SourcePath": "C:\\Users\\vrathod\\Downloads\\Core_w2012r2_vs2013_64.zip",
+                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Core_1.6.35.1040",
+                "ForceUpdate": false,
+                "Branch": "Maintenance\\1.6"
+            }
+        ],
+        "Compile": [
+            {
+                "SourcePath": "C:\\Users\\vrathod\\Downloads\\Facebook_w2012r2_vs2013_64.zip",
+                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Facebook\\Facebook_ODBC_1.6.35.1006_64Bit",
+                "SetupMethod": "",
+                "ForceUpdate": false,
+                "Brand": "IBM"
+            }
+        ],
+        "OEM": [
+            {
+                "SourcePath": "",
+                "DestPath": ""
+            }
+        ],
+        "SignedOEM": [
+            {
+                "SourcePath": "",
+                "DestPath": ""
+            }
+        ],
+        "Nugets": [
+            {
+                "SourcePath": "",
+                "DestPath": ""
+            }
+        ],
+        "SignedNugets": [
+            {
+                "SourcePath": "",
+                "DestPath": ""
+            }
+        ]
+    }
+}
