@@ -1,7 +1,9 @@
 import json
 import os, errno
 import platform
+import subprocess
 import sys
+import winreg
 import zipfile
 
 from Input import InputReader
@@ -18,6 +20,12 @@ def createDir(inDirPath: str, inMode: int = 0o777):
         # Reraise the error unless it's about an already existing directory
         if err.errno != errno.EEXIST or not os.path.isdir(inDirPath):
             raise
+
+
+# def runMetaTester(inDSN: str, inLogsPath: str):
+#     if inDSN is not None and len(inDSN) > 0 and inLogsPath is not None and len(inLogsPath) > 0:
+#         if not os.path.exists('MetaTester'):
+#
 
 
 class Runner:
@@ -40,16 +48,23 @@ class Runner:
                     destFolderPath = os.path.abspath(path['DestPath'])
                     if os.path.isfile(srcFilePath) and zipfile.is_zipfile(srcFilePath):
                         fileName = srcFilePath.split(os.sep)[-1]
-                        fileBitness = fileName[-6:-4]
+                        fileBitness = int(fileName[-6:-4])
                         unpack_archive(os.path.join(destFolderPath, fileName), destFolderPath)
                         if packageName != 'Core':
                             if path['SetupMethod'] != '':
                                 pass
                             else:
+                                driverName = fileName.split('_')[0]
                                 if Runner.setupDriverPackage(packageName, destFolderPath,
-                                                          extractedCorePath, fileName.split('_')[0],
-                                                          coreBranch, path['Brand']):
-                                    pass
+                                                             extractedCorePath, driverName,
+                                                             coreBranch, path['Brand'], fileBitness):
+
+                                    print(f"Provide Required Configurations for {path['Brand']} {driverName} DSN")
+                                    with open('exec.bat', 'w') as file:
+                                        file.write('odbcad32.exe')
+                                    subprocess.call('exec.bat')
+                                    os.remove('exec.bat')
+
                         else:
                             extractedCorePath = destFolderPath
                             coreBranch = path['Branch']
@@ -90,23 +105,22 @@ class Runner:
 
     @staticmethod
     def setupDriverPackage(inPackageType: str, inExtractedPluginPath: str,
-                           inExtractedCorePath: str, inProductName: str, inBranch: str, inBrand: str):
+                           inExtractedCorePath: str, inProductName: str, inBranch: str, inBrand: str, inDriverBit: int):
         if all(map(lambda inArgs: inArgs is not None and len(inArgs) > 0,
                    [inPackageType, inExtractedPluginPath, inExtractedCorePath, inProductName])):
-            hadFailure = False
             brand = None
             pluginLibFolderPath = os.path.join(inExtractedPluginPath, 'lib')
-            if not os.path.exists(os.path.join(pluginLibFolderPath, f"Branding\\{inBrand}")):
-                if os.path.exists(os.path.join(pluginLibFolderPath, f"Branding\\Simba")):
+            if not os.path.exists(os.path.join(inExtractedPluginPath, f"Branding\\{inBrand}")):
+                if os.path.exists(os.path.join(inExtractedPluginPath, f"Branding\\Simba")):
                     brand = 'Simba'
                 else:
-                    print('Error: ' + os.path.join(pluginLibFolderPath, f"Branding\\Simba") + ' and ' +
-                          os.path.join(pluginLibFolderPath, f"Branding\\{inBrand}") + ' not found')
+                    print('Error: ' + os.path.join(inExtractedPluginPath, f"Branding\\Simba") + ' and ' +
+                          os.path.join(inExtractedPluginPath, f"Branding\\{inBrand}") + ' not found')
                     return False
             else:
                 brand = inBrand
             pluginDIDPath = os.path.join(inExtractedPluginPath, f"Branding\\{brand}\\{inProductName}ODBC.did")
-            pluginINIPath = os.path.join(inExtractedPluginPath, f"lib\\CoreBranding\\{brand}\\Setup\\rdf.rdfodbc.ini")
+            pluginINIPath = os.path.join(inExtractedPluginPath, f"lib\\CoreBranding\\Simba\\Setup\\rdf.rdfodbc.ini")
             coreLibPath = os.path.join(inExtractedCorePath, f"Core\\{inBranch}\\ODBC\\lib")
             coreThirdPartyPath = os.path.join(inExtractedCorePath, f"Core\\{inBranch}\\ODBC\\ThirdParty")
             pluginINIFileInLib = os.path.join(pluginLibFolderPath, f"{inBrand}.{inProductName}ODBC.ini")
@@ -122,8 +136,8 @@ class Runner:
                     file.write('\n')
                     file.write(f"ErrorMessagesPath={os.path.join(inExtractedPluginPath, 'ErrorMessages')}\n")
 
-
-                return True
+                return Runner.setupDriverInRegistry(inDriverBit, inProductName, inBrand,
+                                                    os.path.join(pluginLibFolderPath, 'MPAPlugin.dll'))
             else:
                 print('Error: Core or Plugin is not correctly extracted')
                 return False
@@ -132,8 +146,47 @@ class Runner:
             return False
 
     @staticmethod
-    def setupDriverInRegistry(inDriverBit: int):
-        pass
+    def setupDriverInRegistry(inDriverBit: int, inDriverName: str, inBrandName: str, inDriverDLLPath: str):
+        """
+        Sets Driver DLL Path at appropriate Node in the registry
+        :return: True if succeeded else False
+        """
+        if all(map(lambda inArgs: inArgs is not None and len(inArgs) > 0, [inDriverName, inBrandName])):
+            if inDriverBit in [32, 64]:
+                systemBit = int(platform.architecture()[0][:2])
+                if systemBit < inDriverBit:
+                    print(
+                        f"Error: Registry Configurations can not be altered for {inDriverBit}Bit Driver on {systemBit}Bit OS")
+                    return False
+                elif inDriverDLLPath is None or not os.path.exists(inDriverDLLPath):
+                    print('Error: Invalid Driver DLL Path provided')
+                    return False
+                else:
+                    with winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE) as hkey:
+                        with winreg.OpenKey(hkey, 'Software', 0, winreg.KEY_WRITE) as parentKey:
+                            if systemBit != inDriverBit:
+                                parentKey = winreg.OpenKey(parentKey, 'Wow6432Node', 0, winreg.KEY_WRITE)
+                            with winreg.OpenKey(parentKey, 'ODBC', 0, winreg.KEY_WRITE) as odbcKey:
+                                with winreg.OpenKey(odbcKey, 'ODBCINST.INI', 0, winreg.KEY_WRITE) as odbcInstIniKey:
+                                    with winreg.CreateKeyEx(odbcInstIniKey, f"{inBrandName} {inDriverName} ODBC Driver",
+                                                            0, winreg.KEY_ALL_ACCESS) as driverKey:
+                                        winreg.SetValueEx(driverKey, 'Description', 0, winreg.REG_SZ,
+                                                          f"{inBrandName} {inDriverName} ODBC Driver")
+                                        winreg.SetValueEx(driverKey, 'Driver', 0, winreg.REG_SZ, inDriverDLLPath)
+                                        winreg.SetValueEx(driverKey, 'Setup', 0, winreg.REG_SZ, inDriverDLLPath)
+
+                                    with winreg.CreateKeyEx(odbcInstIniKey, 'ODBC Drivers', 0,
+                                                            winreg.KEY_ALL_ACCESS) as odbcDriversKey:
+                                        winreg.SetValueEx(odbcDriversKey, f"{inBrandName} {inDriverName} ODBC Driver",
+                                                          0, winreg.REG_SZ, 'Installed')
+                    return True
+            else:
+                print('Error: This function supports only 32 & 64 Drivers')
+                return False
+        else:
+            print('Error: Invalid Arguments passed')
+            return False
+
 
 if __name__ == '__main__':
     # userName = input()
