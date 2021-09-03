@@ -1,21 +1,43 @@
 {
     "RemoteMachineAddress": "van-wnt-vm.simba.ad",
-    "Source": {
-        "Core": [
-            {
-                "SourcePath": "C:\\Users\\vrathod\\Downloads\\Core_w2012r2_vs2013_64.zip",
-                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Core_1.6.35.1040",
-                "ForceUpdate": false,
-                "Branch": "Maintenance\\1.6"
-            }
-        ],
+    "Core": {
+        "SourcePath": "\\\\oak.simba.ad\\builds\\Drivers\\MemphisODBC\\Core\\1.6\\compile\\Memphis_Core_ODBC_1.6.35.1040_SEN_SimbaEngineSDK_10.1.20.1180_Internal\\Core_w2012r2_vs2013_64.zip",
+        "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Core_1.6.35.1040",
+        "ForceUpdate": false,
+        "Branch": "Maintenance\\1.6"
+    },
+    "Plugin": {
         "Compile": [
             {
-                "SourcePath": "C:\\Users\\vrathod\\Downloads\\Facebook_w2012r2_vs2013_64.zip",
-                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Facebook\\Facebook_ODBC_1.6.35.1006_64Bit",
-                "SetupMethod": "",
+                "SourcePath": "\\\\oak.simba.ad\\builds\\Drivers\\MemphisODBC\\DataSources\\Hubspot\\1.6\\compile\\Hubspot_ODBC_1.6.34.1013_CORE_Memphis_Core_ODBC_1.6.34.1039_SEN_SimbaEngineSDK_10.1.20.1180_Internal\\Hubspot_w2012r2_vs2013_64.zip",
+                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Hubspot\\Hubspot_ODBC_1.6.34.1013_64Bit",
                 "ForceUpdate": false,
-                "Brand": "IBM"
+                "Brand": "Microsoft",
+                "WaitForUserToSetupDSN": false,
+                "DataSourceConfiguration": {
+                    "Description": "Microsoft Hubspot DSN Updated",
+                    "Driver": "Microsoft Hubspot ODBC Driver",
+                    "Auth_Client_Id": "151fc1f7-30bd-42d8-8f95-dc791c593101",
+                    "Auth_Type": "OAuth_2.0",
+                    "Auth_Scope": "contacts+social+reports+content+forms+automation+files+business-intelligence+integration-sync",
+                    "EncAccessToken": "DB11BF69F8E2F5D79CFE57F00303529049E072A5655E45ED5CAD4DF445BDB34B677797C12735DED7B8412A9D1544A08E42C065DCE894929FCEDA87F8D9AC0E7ADDF5C32896E0D75900592258ED967BC1DBC23BA63A90AFC0409D0D06A8BA362046BD33C1144762A3258049F1DF2E19C9868E822A1878210D26248A14F048392DB736859020685610E1D5988349B2902A2B0D9F351F988386A268DC23E4CBE4702CF3AA11EB1E0D2B548AD24834AC785B",
+                    "EncClientSecret": "03D683667E7923EB1104EE869B4F7770BD6F1F0E70D50CBF9EFAEC9221A7B3D36F59FB9EB9FBCF7D33978EAE7E57C730",
+                    "Host": "api.hubapi.com",
+                    "ProxyHost": "localhost",
+                    "ProxyPort": "8888",
+                    "UseWindowsProxySettings": "0",
+                    "EnableDoubleBuffer": "1",
+                    "UseHostVerification": "0",
+                    "UsePeerVerification": "0",
+                    "Auth_BaseRedirectUri": "http://localhost:6367",
+                    "Auth_Expires": "2021-09-02T22:53:13+05:30",
+                    "DSNSETUP": "1",
+                    "ENABLESESSIONTOKEN": "0",
+                    "ENCREFRESHTOKEN": "BB908F659446F7053E74EB17B5E96CF5D5BE811A71EEDB34EF87C8D64890CE9A98316A087C02C429011BE0741ED3C034",
+                    "Hub Id": "5758638",
+                    "USEEC2INST": "0",
+                    "UseEncryptedEndpoints": "1"
+                }
             }
         ],
         "OEM": [
