@@ -1,8 +1,5 @@
-import os
-import os.path
-import shutil
-import sys
 import win32wnet
+from GenUtility import isNoneOrEmpty
 
 
 class RemoteConnection:
@@ -13,10 +10,10 @@ class RemoteConnection:
 
     def connect(self):
         """
-        Connects to the given host via provided credentials
+        Connects to the given host via provided credentials \n
         :return: Returns True if successfully connected else False
         """
-        if all(map(lambda x: x is not None and len(x) > 0, [self.mHostAddress, self.mUserName, self.mPassword])):
+        if not isNoneOrEmpty(self.mHostAddress, self.mUserName, self.mPassword):
             unc = ''.join(['\\\\', self.mHostAddress])
             netResource = win32wnet.NETRESOURCE()
             netResource.lpRemoteName = unc
@@ -26,7 +23,7 @@ class RemoteConnection:
                 if isinstance(error, win32wnet.error):
                     if 1219 in error.args:
                         win32wnet.WNetCancelConnection2(unc, 0, 0)
-                        return RemoteConnection.connect(self.mHostAddress, self.mUserName, self.mPassword)
+                        return self.connect()
                     elif 1326 in error.args:
                         print('Error: Invalid Username or Password!')
                         return False
@@ -43,7 +40,7 @@ class RemoteConnection:
 
     def disconnect(self):
         """
-        Disconnects from the given host
+        Disconnects from the given host \n
         :return: Returns True if successfully disconnected else False
         """
         unc = ''.join(['\\\\', self.mHostAddress])

@@ -1,55 +1,15 @@
-import os
-import errno
+import enum
 import platform
 import random
 import re
-import subprocess
 import winreg
 import zipfile
 
-from Input import InputReader, isNoneOrEmpty
+from Input import InputReader
 from RemoteConnection import RemoteConnection
 from shutil import copy, unpack_archive, copytree
+from GenUtility import *
 from getpass import getpass
-
-
-def createDir(inDirPath: str, inMode: int = 0o777):
-    try:
-        os.makedirs(inDirPath, inMode)
-    except OSError as err:
-        # Re-raise the error unless it's for already existing directory
-        if err.errno != errno.EEXIST or not os.path.isdir(inDirPath):
-            raise
-
-
-def writeInFile(inContent: str, inLocation: str):
-    if not isNoneOrEmpty(inContent, inLocation):
-        targetLocation = os.path.abspath(inLocation)
-        fileName = targetLocation.split(os.sep)[-1]
-        targetDir = targetLocation[:targetLocation.index(fileName)]
-        if fileName.find('.') <= 0:
-            print(f"Error: `{inLocation}` must contain File Name with valid File Extension. "
-                  f"i.e `Z:fakepath/file_name.txt")
-            return False
-        if not os.path.exists(targetDir):
-            createDir(targetDir)
-        with open(inLocation, 'w') as file:
-            file.write(inContent)
-        return True
-    else:
-        print('Error: Invalid Parameters')
-        return False
-
-
-def openExe(inEXEPath: str):
-    if not isNoneOrEmpty(inEXEPath):
-        with open('exec.bat', 'w') as file:
-            file.write(inEXEPath)
-        subprocess.call('exec.bat')
-        os.remove('exec.bat')
-        return True
-    else:
-        return False
 
 
 class MetaTester:
@@ -60,7 +20,7 @@ class MetaTester:
         Executes `MetaTester` \n
         :param inDSN: Name of the Data Source
         :param inDriverBit: Bit count of Driver
-        :return: Returns Generated Logs during MetaTester if succefully completed else None
+        :return: Returns Generated Logs during MetaTester if successfully completed else None
         """
         if not isNoneOrEmpty(inDSN) and inDriverBit in [32, 64]:
             if 'METATESTER_DIR' in os.environ:
@@ -68,10 +28,10 @@ class MetaTester:
                 if os.path.exists(METATESTER_DIR):
                     MetaTesterPath = os.path.join(METATESTER_DIR, f"MetaTester{inDriverBit}.exe")
                     if os.path.exists(MetaTesterPath):
+                        MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
+                        command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
                         try:
-                            MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
-                            metatesterLogs = subprocess.check_output(f"{MetaTesterPath} -d \"{inDSN}\" "
-                                                                     f"-o {MetaTesterLogFileName}").decode()
+                            metatesterLogs = subprocess.check_output(command, timeout=TimeOutLevel.MEDIUM.value).decode()
                             if 'Done validation' in metatesterLogs:
                                 return metatesterLogs
                             else:
@@ -79,8 +39,14 @@ class MetaTester:
                                 print(f"For more details, "
                                       f"Check logs: {os.path.join(METATESTER_DIR, MetaTesterLogFileName)}")
                                 return None
+
                         except subprocess.CalledProcessError as error:
                             return error.output.decode()
+
+                        except subprocess.TimeoutExpired as error:
+                            print(f"Error: \"{command}\" could not be executed in {TimeOutLevel.MEDIUM.value / 60} Minutes!")
+                            return None
+
                         except Exception as error:
                             print(f"Error: {error}")
                             return None
@@ -197,25 +163,20 @@ class INIFileTester:
             correctDSNConfig = dict()
             hadFailure = False
             if inWaitForUserToSetupDSN:
-                print('Setup Wrong Value')
-                openExe('odbcad32.exe')
+                print('Instruction: Set one of the Connection Property `wrong` such that '
+                      'Driver would show an Error Message')
+                runExecutable('odbcad32.exe', TimeOutLevel.MEDIUM)
             else:
                 for key, value in inDriverRegistryConfig.items():
                     if key.lower() == 'host':
                         incorrectDSNConfig = {'Host': ''.join(random.sample(list(value), len(value)))}
                         correctDSNConfig = {'Host': value}
                         break
-                if len(incorrectDSNConfig) == 0:
+                else:
                     incorrectDSNConfig = {'UseEncryptedEndpoints': '0'}
                     correctDSNConfig = {'UseEncryptedEndpoints': '1'}
-            # if inWaitForUserToSetupDSN:
-            #     print('Setup Wrong Value')
-            #     openExe('odbcad32.exe')
-            # else:
-            #     if not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, incorrectDSNConfig):
-            #         return False
-            if not inWaitForUserToSetupDSN and not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, incorrectDSNConfig):
-                return False
+                if not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, incorrectDSNConfig):
+                    return False
             try:
                 logs = MetaTester.run(inDSN, inDriverBit)
                 writeInFile(logs, inLogsPath)
@@ -225,13 +186,14 @@ class INIFileTester:
                 hadFailure = True
             finally:
                 if inWaitForUserToSetupDSN:
-                    print('Setup Correct Value')
-                    openExe('odbcad32.exe')
+                    print('Instruction: Set the Connection Properties to its correct values!')
+                    runExecutable('odbcad32.exe')
                 else:
-                    INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, correctDSNConfig)
+                    if len(correctDSNConfig) > 0:
+                        INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, correctDSNConfig)
+                    else:
+                        INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, inDriverRegistryConfig)
                 return not hadFailure
-            # else:
-            #     return False
         else:
             print('Error: Invalid Arguments passed')
             return False
@@ -301,9 +263,10 @@ class Runner:
         remoteConnection = RemoteConnection(self.mInput.getRemoteMachineAddress(), self.mUserName, self.mPassword)
         if remoteConnection.connect():
             coreInfo = self.mInput.getCoreInfo()
-            if Runner.copyFile(coreInfo.mSourcePath, coreInfo.mDestinationPath, coreInfo.mForceUpdate):
-                unpack_archive(os.path.join(coreInfo.mDestinationPath, coreInfo.mSourcePath.split(os.sep)[-1]),
-                               coreInfo.mDestinationPath)
+            if copyFile(coreInfo.getSourcePath(), coreInfo.getDestinationPath(),
+                        coreInfo.getFileName(), coreInfo.shouldForceUpdate()):
+                unpack_archive(os.path.join(coreInfo.getDestinationPath(), coreInfo.getSourcePath().split(os.sep)[-1]),
+                               coreInfo.getDestinationPath())
                 summary['CoreSetup'] = 'Succeed'
             else:
                 summary['CoreSetup'] = 'Failed'
@@ -311,135 +274,109 @@ class Runner:
 
             summary['Plugins'] = dict()
             for pluginInfo in self.mInput.getPluginInfo():
-                srcFilePath = os.path.abspath(pluginInfo.mSourcePath)
-                destFolderPath = os.path.abspath(pluginInfo.mDestinationPath)
-                if not Runner.copyFile(pluginInfo.mSourcePath, pluginInfo.mDestinationPath, pluginInfo.mForceUpdate):
-                    summary['Plugins'][srcFilePath] = 'Failed'
+                sourceFilePath = os.path.abspath(pluginInfo.getSourcePath())
+                destinationFolderPath = os.path.abspath(pluginInfo.getDestinationPath())
+                fileName = pluginInfo.getFileName()
+
+                if not copyFile(sourceFilePath, destinationFolderPath, fileName, pluginInfo.shouldForceUpdate()):
+                    summary['Plugins'][sourceFilePath] = 'Failed'
                     break
-                if os.path.isfile(srcFilePath) and zipfile.is_zipfile(srcFilePath):
-                    fileName = srcFilePath.split(os.sep)[-1]
-                    fileBitness = int(fileName[-6:-4])
-                    unpack_archive(os.path.join(destFolderPath, fileName), destFolderPath)
-                    driverName = fileName.split('_')[0]
-                    dataSourceName = f"{pluginInfo.mBrand} {driverName}"
-                    if Runner.setupDriverPackage(destFolderPath, os.path.abspath(coreInfo.mDestinationPath), driverName,
-                                                 coreInfo.mBranch, pluginInfo.mBrand, fileBitness,
-                                                 pluginInfo.mDataSourceConfiguration, pluginInfo.mWaitForUserToSetupDSN):
-                        summary['Plugins'][srcFilePath] = dict()
-                        summary['Plugins'][srcFilePath]['Setup'] = 'Succeed'
-                        if pluginInfo.mWaitForUserToSetupDSN:
+                if os.path.isfile(sourceFilePath) and zipfile.is_zipfile(sourceFilePath):
+                    dataSourceName, fileBitness = pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount()
+
+                    unpack_archive(os.path.join(destinationFolderPath, fileName), destinationFolderPath)
+
+                    if Runner.setupDriverPackage(coreInfo, pluginInfo):
+                        summary['Plugins'][sourceFilePath] = dict()
+                        summary['Plugins'][sourceFilePath]['Setup'] = 'Succeed'
+                        if pluginInfo.shouldWaitForUserToSetupDSN():
                             print(f"Provide Required Configurations for {dataSourceName} DSN")
-                            openExe('odbcad32.exe')
-                        driversLogsPath = os.path.abspath(os.path.join(destFolderPath, 'DriverLogs'))
-                        logsPath = os.path.join(driversLogsPath, f"{pluginInfo.mBrand}_{driverName}_MetaTesterLogs.txt")
+                            runExecutable('odbcad32.exe')
+                        driversLogsPath = os.path.abspath(os.path.join(destinationFolderPath, 'DriverLogs'))
+                        logsPath = os.path.join(driversLogsPath, f"{pluginInfo.getPluginBrand()}_"
+                                                                 f"{pluginInfo.getPackageName()}_MetaTesterLogs.txt")
                         metaTesterLogs = MetaTester.run(dataSourceName, fileBitness)
                         if MetaTester.parseLogs(metaTesterLogs, logsPath):
-                            summary['Plugins'][srcFilePath]['MetaDataTest'] = 'Succeed'
-                            summary['Plugins'][srcFilePath]['MetaDataTestLogs'] = logsPath
-                            print(f"{srcFilePath}: MetaTester ran to completion successfully")
+                            summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Succeed'
+                            summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                            print(f"{sourceFilePath}: MetaTester ran to completion successfully")
                         else:
-                            summary['Plugins'][srcFilePath]['MetaDataTest'] = 'Failed'
-                            summary['Plugins'][srcFilePath]['MetaDataTestLogs'] = logsPath
-                            print(f"{srcFilePath}: MetaTester reported critical errors")
+                            summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
+                            summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                            print(f"{sourceFilePath}: MetaTester reported critical errors")
 
-                        logsPath = os.path.join(driversLogsPath,
-                                                f"{pluginInfo.mBrand}_{driverName}_INIFileTestLogs.txt")
+                        logsPath = os.path.join(driversLogsPath, f"{pluginInfo.getPluginBrand()}_"
+                                                                 f"{pluginInfo.getPackageName()}_INIFileTestLogs.txt")
                         if INIFileTester.run(dataSourceName, fileBitness, logsPath,
-                                             pluginInfo.mDataSourceConfiguration, pluginInfo.mWaitForUserToSetupDSN):
-                            summary['Plugins'][srcFilePath]['INIFileTest'] = 'Succeed'
-                            summary['Plugins'][srcFilePath]['INIFileTestLogs'] = logsPath
-                            print(f"{srcFilePath}: INI File Test ran to completion successfully")
+                                             pluginInfo.getDataSourceConfiguration(),
+                                             pluginInfo.shouldWaitForUserToSetupDSN()):
+                            summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Succeed'
+                            summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
+                            print(f"{sourceFilePath}: INI File Test ran to completion successfully")
                         else:
-                            summary['Plugins'][srcFilePath]['MetaDataTest'] = 'Failed'
-                            summary['Plugins'][srcFilePath]['MetaDataTestLogs'] = logsPath
-                            print(f"{srcFilePath}: INI File Test failed")
+                            summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
+                            summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                            print(f"{sourceFilePath}: INI File Test failed")
                 else:
                     print('Error: Invalid Source Path provided.\nExpected File Extension is .Zip')
-                    summary['Plugins'][srcFilePath] = 'Failed'
+                    summary['Plugins'][sourceFilePath] = 'Failed'
             remoteConnection.disconnect()
         return summary
 
     @staticmethod
-    def copyFile(inSource: str, inDest: str, inForceUpdate: bool = False):
-        if not isNoneOrEmpty(inSource, inDest):
-            if os.path.exists(inSource):
-                try:
-                    if not os.path.exists(inDest):
-                        createDir(inDest)
-                    if os.path.isdir(inSource):
-                        copytree(inSource, inDest)
-                    else:
-                        filePath = os.path.abspath(inDest)
-                        fileName = os.path.abspath(inSource).split(os.sep)[-1]
-                        if not os.path.exists(os.path.join(filePath, fileName)) or inForceUpdate:
-                            copy(inSource, inDest)
-                    return True
-                except Exception as error:
-                    print(error)
-                    return False
+    def setupDriverPackage(inCoreInfo: InputReader.Core, inPluginInfo: InputReader.Plugin):
+        brand = inPluginInfo.getPluginBrand()
+        extractedPluginPath = inPluginInfo.getDestinationPath()
+        driverName = inPluginInfo.getPackageName()
+
+        coreBranch = inCoreInfo.getBranch()
+        extractedCorePath = inCoreInfo.getDestinationPath()
+        pluginLibFolderPath = os.path.join(extractedPluginPath, 'lib')
+        if not os.path.exists(os.path.join(extractedPluginPath, f"Branding\\{brand}")):
+            if os.path.exists(os.path.join(extractedPluginPath, f"Branding\\Simba")):
+                brand = 'Simba'
             else:
-                print(f"Error: Given Path {inSource} is Invalid!")
+                print('Error: ' + os.path.join(extractedPluginPath, f"Branding\\Simba") + ' and ' +
+                      os.path.join(extractedPluginPath, f"Branding\\{brand}") + ' not found')
                 return False
+        pluginDIDPath = os.path.join(extractedPluginPath, f"Branding\\{brand}\\{driverName}ODBC.did")
+        pluginINIPath = os.path.join(extractedPluginPath, f"lib\\CoreBranding\\Simba\\Setup\\rdf.rdfodbc.ini")
+        coreLibPath = os.path.join(extractedCorePath, f"Core\\{coreBranch}\\ODBC\\lib")
+        coreThirdPartyPath = os.path.join(extractedCorePath, f"Core\\{coreBranch}\\ODBC\\ThirdParty")
+        pluginINIFileInLib = os.path.join(pluginLibFolderPath, f"{brand}.{driverName}ODBC.ini")
+
+        if all(map(lambda filePath: os.path.exists(filePath),
+                   [pluginDIDPath, pluginINIPath, coreLibPath, coreThirdPartyPath])):
+            copy(pluginDIDPath, pluginLibFolderPath)
+            copy(pluginINIPath, pluginINIFileInLib)
+            copytree(coreLibPath, pluginLibFolderPath, dirs_exist_ok=True)
+            copytree(coreThirdPartyPath, pluginLibFolderPath, dirs_exist_ok=True)
+
+            with open(pluginINIFileInLib, 'a') as file:
+                file.write('\n')
+                file.write(f"ErrorMessagesPath={os.path.join(extractedPluginPath, 'ErrorMessages')}\n")
+
+            return Runner.setupDriverInRegistry(inPluginInfo.getPackageBitCount(), inPluginInfo.getDataSourceName(),
+                                                os.path.join(pluginLibFolderPath, 'MPAPlugin.dll'),
+                                                inPluginInfo.getDataSourceConfiguration(),
+                                                inPluginInfo.shouldWaitForUserToSetupDSN())
         else:
-            print('Error: Invalid Arguments passed')
+            print('Error: Core or Plugin is not correctly extracted')
             return False
 
     @staticmethod
-    def setupDriverPackage(inExtractedPluginPath: str,
-                           inExtractedCorePath: str, inProductName: str, inBranch: str, inBrand: str, inDriverBit: int,
-                           inDriverRegistryConfig: dict, inWaitForUserToSetupDSN: bool = False):
-        if not isNoneOrEmpty(inExtractedPluginPath, inExtractedCorePath, inProductName):
-            brand = None
-            pluginLibFolderPath = os.path.join(inExtractedPluginPath, 'lib')
-            if not os.path.exists(os.path.join(inExtractedPluginPath, f"Branding\\{inBrand}")):
-                if os.path.exists(os.path.join(inExtractedPluginPath, f"Branding\\Simba")):
-                    brand = 'Simba'
-                else:
-                    print('Error: ' + os.path.join(inExtractedPluginPath, f"Branding\\Simba") + ' and ' +
-                          os.path.join(inExtractedPluginPath, f"Branding\\{inBrand}") + ' not found')
-                    return False
-            else:
-                brand = inBrand
-            pluginDIDPath = os.path.join(inExtractedPluginPath, f"Branding\\{brand}\\{inProductName}ODBC.did")
-            pluginINIPath = os.path.join(inExtractedPluginPath, f"lib\\CoreBranding\\Simba\\Setup\\rdf.rdfodbc.ini")
-            coreLibPath = os.path.join(inExtractedCorePath, f"Core\\{inBranch}\\ODBC\\lib")
-            coreThirdPartyPath = os.path.join(inExtractedCorePath, f"Core\\{inBranch}\\ODBC\\ThirdParty")
-            pluginINIFileInLib = os.path.join(pluginLibFolderPath, f"{inBrand}.{inProductName}ODBC.ini")
-
-            if all(map(lambda filePath: os.path.exists(filePath),
-                       [pluginDIDPath, pluginINIPath, coreLibPath, coreThirdPartyPath])):
-                copy(pluginDIDPath, pluginLibFolderPath)
-                copy(pluginINIPath, pluginINIFileInLib)
-                copytree(coreLibPath, pluginLibFolderPath, dirs_exist_ok=True)
-                copytree(coreThirdPartyPath, pluginLibFolderPath, dirs_exist_ok=True)
-
-                with open(pluginINIFileInLib, 'a') as file:
-                    file.write('\n')
-                    file.write(f"ErrorMessagesPath={os.path.join(inExtractedPluginPath, 'ErrorMessages')}\n")
-
-                return Runner.setupDriverInRegistry(inDriverBit, inProductName, inBrand,
-                                                    os.path.join(pluginLibFolderPath, 'MPAPlugin.dll'),
-                                                    inDriverRegistryConfig, inWaitForUserToSetupDSN)
-            else:
-                print('Error: Core or Plugin is not correctly extracted')
-                return False
-        else:
-            print('Error: Invalid Arguments passed')
-            return False
-
-    @staticmethod
-    def setupDriverInRegistry(inDriverBit: int, inDriverName: str, inBrandName: str, inDriverDLLPath: str,
+    def setupDriverInRegistry(inDriverBit: int, inDataSourceName: str, inDriverDLLPath: str,
                               inDriverRegistryConfig: dict, inWaitForUserToSetupDSN: bool = False):
         """
         Sets Driver DLL Path at appropriate Node in the registry\n
         :return: True if succeeded else False
         """
-        if not isNoneOrEmpty(inDriverName, inBrandName):
+        if not isNoneOrEmpty(inDataSourceName, inDriverDLLPath):
             if inDriverBit in [32, 64]:
                 systemBit = int(platform.architecture()[0][:2])
                 if systemBit < inDriverBit:
-                    print(
-                        f"Error: Registry Configurations can not be altered for {inDriverBit}Bit Driver on {systemBit}Bit OS")
+                    print(f"Error: Registry Configurations can not be altered for "
+                          f"{inDriverBit}Bit Driver on {systemBit}Bit OS")
                     return False
                 elif inDriverDLLPath is None or not os.path.exists(inDriverDLLPath):
                     print('Error: Invalid Driver DLL Path provided')
@@ -451,26 +388,28 @@ class Runner:
                                 parentKey = winreg.OpenKey(parentKey, 'Wow6432Node', 0, winreg.KEY_WRITE)
                             with winreg.OpenKey(parentKey, 'ODBC', 0, winreg.KEY_WRITE) as odbcKey:
                                 with winreg.OpenKey(odbcKey, 'ODBCINST.INI', 0, winreg.KEY_WRITE) as odbcInstIniKey:
-                                    with winreg.CreateKeyEx(odbcInstIniKey, f"{inBrandName} {inDriverName} ODBC Driver",
+                                    with winreg.CreateKeyEx(odbcInstIniKey, f"{inDataSourceName} ODBC Driver",
                                                             0, winreg.KEY_ALL_ACCESS) as driverKey:
                                         winreg.SetValueEx(driverKey, 'Description', 0, winreg.REG_SZ,
-                                                          f"{inBrandName} {inDriverName} ODBC Driver")
+                                                          f"{inDataSourceName} ODBC Driver")
                                         winreg.SetValueEx(driverKey, 'Driver', 0, winreg.REG_SZ, inDriverDLLPath)
                                         winreg.SetValueEx(driverKey, 'Setup', 0, winreg.REG_SZ, inDriverDLLPath)
 
                                     with winreg.CreateKeyEx(odbcInstIniKey, 'ODBC Drivers', 0,
                                                             winreg.KEY_ALL_ACCESS) as odbcDriversKey:
-                                        winreg.SetValueEx(odbcDriversKey, f"{inBrandName} {inDriverName} ODBC Driver",
+                                        winreg.SetValueEx(odbcDriversKey, f"{inDataSourceName} ODBC Driver",
                                                           0, winreg.REG_SZ, 'Installed')
 
                                 with winreg.OpenKey(odbcKey, 'ODBC.INI', 0, winreg.KEY_WRITE) as odbcIniKey:
                                     with winreg.OpenKey(odbcIniKey, 'ODBC Data Sources', 0,
                                                         winreg.KEY_WRITE) as odbcDSkey:
-                                        winreg.SetValueEx(odbcDSkey, f"{inBrandName} {inDriverName}",
-                                                          0, winreg.REG_SZ, f"{inBrandName} {inDriverName} ODBC Driver")
+                                        winreg.SetValueEx(odbcDSkey, f"{inDataSourceName}",
+                                                          0, winreg.REG_SZ, f"{inDataSourceName} ODBC Driver")
 
-                                    if not inWaitForUserToSetupDSN:
-                                        with winreg.CreateKeyEx(odbcIniKey, f"{inBrandName} {inDriverName}", 0,
+                                    if inWaitForUserToSetupDSN:
+                                        runExecutable('odbcad32.exe')
+                                    else:
+                                        with winreg.CreateKeyEx(odbcIniKey, f"{inDataSourceName}", 0,
                                                                 winreg.KEY_WRITE) as driverKey:
                                             for key, value in inDriverRegistryConfig.items():
                                                 winreg.SetValueEx(driverKey, key, 0, winreg.REG_SZ, value)
