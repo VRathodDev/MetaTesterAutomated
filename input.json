@@ -1,16 +1,16 @@
 {
     "RemoteMachineAddress": "van-wnt-vm.simba.ad",
     "Core": {
-        "SourcePath": "\\\\oak.simba.ad\\builds\\Drivers\\MemphisODBC\\Core\\1.6\\compile\\Memphis_Core_ODBC_1.6.35.1040_SEN_SimbaEngineSDK_10.1.20.1180_Internal\\Core_w2012r2_vs2013_32.zip",
-        "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Core_1.6.35.1040_32Bit",
+        "SourcePath": "\\\\oak.simba.ad\\builds\\Drivers\\MemphisODBC\\Core\\1.6\\compile\\Memphis_Core_ODBC_1.6.35.1040_SEN_SimbaEngineSDK_10.1.20.1180_Internal\\Core_w2012r2_vs2013_64.zip",
+        "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Core_1.6.35.1040",
         "ForceUpdate": false,
         "Branch": "Maintenance\\1.6"
     },
     "Plugin": {
         "Compile": [
             {
-                "SourcePath": "\\\\oak.simba.ad\\builds\\Drivers\\MemphisODBC\\DataSources\\Hubspot\\1.6\\compile\\Hubspot_ODBC_1.6.34.1013_CORE_Memphis_Core_ODBC_1.6.34.1039_SEN_SimbaEngineSDK_10.1.20.1180_Internal\\Hubspot_w2012r2_vs2013_32.zip",
-                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Hubspot\\Hubspot_ODBC_1.6.34.1013_32Bit",
+                "SourcePath": "\\\\oak.simba.ad\\builds\\Drivers\\MemphisODBC\\DataSources\\Hubspot\\1.6\\compile\\Hubspot_ODBC_1.6.34.1013_CORE_Memphis_Core_ODBC_1.6.34.1039_SEN_SimbaEngineSDK_10.1.20.1180_Internal\\Hubspot_w2012r2_vs2013_64.zip",
+                "DestPath": "C:\\Users\\vrathod\\Desktop\\Test\\Hubspot\\Hubspot_ODBC_1.6.34.1013_64Bit",
                 "ForceUpdate": false,
                 "Brand": "Microsoft",
                 "WaitForUserToSetupDSN": false,

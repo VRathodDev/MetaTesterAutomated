@@ -1,77 +1,7 @@
 import json
 import os
 import sys
-from abc import ABC, abstractmethod
-from GenUtility import isNoneOrEmpty
-
-
-class Package(ABC):
-    @abstractmethod
-    def __init__(self, inSourcePath: str, inDestinationPath: str, inForceUpdate: bool = False):
-        if (not isNoneOrEmpty(inSourcePath, inDestinationPath)) and inForceUpdate is not None:
-            self.__mSourcePath = inSourcePath
-            self.__mDestinationPath = inDestinationPath
-            self.__mForceUpdate = inForceUpdate
-            self.__mFileName = inSourcePath.split(os.sep)[-1]
-        else:
-            print('Error: Invalid Parameters')
-            sys.exit(1)
-
-    def getSourcePath(self):
-        return self.__mSourcePath
-
-    def getDestinationPath(self):
-        return os.path.abspath(self.__mDestinationPath)
-
-    def getFileName(self):
-        return self.__mFileName
-
-    def getPackageName(self):
-        return self.__mFileName.split('_')[0]
-
-    def getPackageBitCount(self):
-        return int(self.__mFileName[-6:-4])
-
-    def shouldForceUpdate(self):
-        return self.__mForceUpdate
-
-
-class Core(Package):
-    def __init__(self, inSourcePath: str, inDestinationPath: str, inBranch: str, inForceUpdate: bool = False):
-        super().__init__(inSourcePath, inDestinationPath, inForceUpdate)
-        if not isNoneOrEmpty(inBranch):
-            self.__mBranch = inBranch
-        else:
-            print('Error: Invalid Parameters')
-            sys.exit(1)
-
-    def getBranch(self):
-        return self.__mBranch
-
-
-class Plugin(Package):
-    def __init__(self, inSourcePath: str, inDestinationPath: str, inBrand: str,
-                 inDataSourceConfiguration: dict, inWaitForUserToSetupDSN: bool = False, inForceUpdate: bool = False):
-        super().__init__(inSourcePath, inDestinationPath, inForceUpdate)
-        if not isNoneOrEmpty(inBrand, inDataSourceConfiguration):
-            self.__mBrand = inBrand
-            self.__mWaitForUserToSetupDSN = inWaitForUserToSetupDSN
-            self.__mDataSourceConfiguration = inDataSourceConfiguration
-        else:
-            print('Error: Invalid Parameters')
-            sys.exit(1)
-
-    def getPluginBrand(self):
-        return self.__mBrand
-
-    def getDataSourceName(self):
-        return f"{self.__mBrand} {self.getPackageName()}"
-
-    def shouldWaitForUserToSetupDSN(self):
-        return self.__mWaitForUserToSetupDSN
-
-    def getDataSourceConfiguration(self):
-        return self.__mDataSourceConfiguration
+from Packages import Core, Plugin
 
 
 class InputReader:

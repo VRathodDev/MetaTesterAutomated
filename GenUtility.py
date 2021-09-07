@@ -5,15 +5,13 @@ General Utility Functions
 import errno
 import os
 import subprocess
-import time
-from shutil import copytree, copy
 from enum import IntEnum
 
 
 class TimeOutLevel(IntEnum):
 
     LOW = 300
-    MEDIUM = 90
+    MEDIUM = 600
     HIGH = 1200
 
 
@@ -59,35 +57,11 @@ def runExecutable(inCommands: str, inTimeOut: TimeOutLevel = TimeOutLevel.MEDIUM
             file.write(inCommands)
         try:
             subprocess.call('exec.bat', timeout=inTimeOut.value)
-        except subprocess.TimeoutExpired as error:
+        except subprocess.TimeoutExpired:
             print(f"Error: {inCommands} could not be executed in {inTimeOut.value/60} Minutes!")
             return False
         finally:
             os.remove('exec.bat')
         return True
     else:
-        return False
-
-
-def copyFile(inSourcePath: str, inDestinationPath: str, inFileName: str, inForceUpdate: bool = False):
-    """Copies file from Soource Location to Destination Location."""
-    if not isNoneOrEmpty(inSourcePath, inDestinationPath, inFileName):
-        if os.path.exists(inSourcePath):
-            try:
-                if not os.path.exists(inDestinationPath):
-                    createDir(inDestinationPath)
-                if os.path.isdir(inSourcePath):
-                    copytree(inSourcePath, inDestinationPath)
-                else:
-                    if not os.path.exists(os.path.join(os.path.abspath(inDestinationPath), inFileName)) or inForceUpdate:
-                        copy(inSourcePath, inDestinationPath)
-                    return True
-            except Exception as error:
-                print(error)
-                return False
-        else:
-            print(f"Error: Given Path {inSourcePath} is Invalid!")
-            return False
-    else:
-        print('Error: Invalid Arguments passed')
         return False
