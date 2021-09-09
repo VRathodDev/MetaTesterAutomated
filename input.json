@@ -34,34 +34,9 @@
                     "DSNSETUP": "1",
                     "ENABLESESSIONTOKEN": "0",
                     "ENCREFRESHTOKEN": "BB908F659446F7053E74EB17B5E96CF5D5BE811A71EEDB34EF87C8D64890CE9A98316A087C02C429011BE0741ED3C034",
-                    "Hub Id": "5758638",
                     "USEEC2INST": "0",
                     "UseEncryptedEndpoints": "1"
                 }
-            }
-        ],
-        "OEM": [
-            {
-                "SourcePath": "",
-                "DestPath": ""
-            }
-        ],
-        "SignedOEM": [
-            {
-                "SourcePath": "",
-                "DestPath": ""
-            }
-        ],
-        "Nugets": [
-            {
-                "SourcePath": "",
-                "DestPath": ""
-            }
-        ],
-        "SignedNugets": [
-            {
-                "SourcePath": "",
-                "DestPath": ""
             }
         ]
     }
