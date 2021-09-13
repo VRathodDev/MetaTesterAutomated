@@ -143,6 +143,9 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"INIFileTestLogs.txt")
+                MetaTesterPath = os.path.abspath('MetaTester')
+                if not os.path.exists(MetaTesterPath):
+                    MetaTesterPath = None
                 if INIFileTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(), logsPath,
                                      pluginInfo.getDataSourceConfiguration(),
                                      pluginInfo.shouldWaitForUserToSetupDSN()):

@@ -47,14 +47,13 @@ class Package(ABC):
             try:
                 if not os.path.exists(destination):
                     createDir(destination)
-                else:
-                    if not os.path.exists(filePath) or forceUpdate:
-                        copy(source, destination)
-                        if zipfile.is_zipfile(filePath):
-                            unpack_archive(filePath, destination)
-                        else:
-                            print('Error: Expected File Type mismatched. `Zip` required')
-                            return False
+                if not os.path.exists(filePath) or forceUpdate:
+                    copy(source, destination)
+                    if zipfile.is_zipfile(filePath):
+                        unpack_archive(filePath, destination)
+                    else:
+                        print('Error: Expected File Type mismatched. `Zip` required')
+                        return False
                 return True
             except Exception as error:
                 print(error)
@@ -146,8 +145,8 @@ class Plugin(Package):
                                                           0, winreg.REG_SZ, 'Installed')
 
                                 with winreg.OpenKey(odbcKey, 'ODBC.INI', 0, winreg.KEY_WRITE) as odbcIniKey:
-                                    with winreg.OpenKey(odbcIniKey, 'ODBC Data Sources', 0,
-                                                        winreg.KEY_WRITE) as odbcDSkey:
+                                    with winreg.CreateKeyEx(odbcIniKey, 'ODBC Data Sources', 0,
+                                                            winreg.KEY_WRITE) as odbcDSkey:
                                         winreg.SetValueEx(odbcDSkey, f"{dataSourceName}",
                                                           0, winreg.REG_SZ, f"{dataSourceName} ODBC Driver")
 

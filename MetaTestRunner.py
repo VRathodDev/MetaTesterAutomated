@@ -1,6 +1,7 @@
 import re
 import os
 import subprocess
+import sys
 
 from Input import InputReader
 from RemoteConnection import RemoteConnection
@@ -11,51 +12,60 @@ from getpass import getpass
 class MetaTester:
 
     @staticmethod
-    def run(inDSN: str, inDriverBit: int):
+    def run(inDSN: str, inDriverBit: int, inMetaTesterDir: str = None):
         """
         Executes `MetaTester` \n
+        :param inMetaTesterDir: Path to MetaTester. If provided, it won't use Environment Variable
         :param inDSN: Name of the Data Source
         :param inDriverBit: Bit count of Driver
         :return: Returns Generated Logs during MetaTester if successfully completed else None
         """
         if not isNoneOrEmpty(inDSN) and inDriverBit in [32, 64]:
-            if 'METATESTER_DIR' in os.environ:
-                METATESTER_DIR = os.path.abspath(os.getenv('METATESTER_DIR'))
-                if os.path.exists(METATESTER_DIR):
-                    MetaTesterPath = os.path.join(METATESTER_DIR, f"MetaTester{inDriverBit}.exe")
-                    if os.path.exists(MetaTesterPath):
-                        MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
-                        command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
-                        try:
-                            metatesterLogs = subprocess.check_output(command,
-                                                                     timeout=TimeOutLevel.MEDIUM.value).decode()
-                            if 'Done validation' in metatesterLogs:
-                                return metatesterLogs
-                            else:
-                                print('Error: MetaTester failed to run to completion successfully')
-                                print(f"For more details, "
-                                      f"Check logs: {os.path.join(METATESTER_DIR, MetaTesterLogFileName)}")
-                                return None
-
-                        except subprocess.CalledProcessError as error:
-                            return error.output.decode()
-
-                        except subprocess.TimeoutExpired:
-                            print(f"Error: \"{command}\" could not be executed in "
-                                  f"{TimeOutLevel.MEDIUM.value / 60} Minutes!")
-                            return None
-
-                        except Exception as error:
-                            print(f"Error: {error}")
-                            return None
-                    else:
-                        print(f"Error: MetaTester{inDriverBit}.exe does not exist in {METATESTER_DIR}")
-                        return None
+            METATESTER_DIR = None
+            if not isNoneOrEmpty(inMetaTesterDir):
+                if os.path.exists(inMetaTesterDir):
+                    METATESTER_DIR = os.path.abspath(inMetaTesterDir)
                 else:
-                    print(f"Error: Invalid Path {METATESTER_DIR} set for Environment Variable `METATESTER_DIR`")
+                    print(f"Error: Invalid Path {inMetaTesterDir}")
                     return None
             else:
-                print('Error: Environment Variable `METATESTER_DIR` does not exist')
+                if 'METATESTER_DIR' in os.environ:
+                    METATESTER_DIR = os.path.abspath(os.getenv('METATESTER_DIR'))
+                else:
+                    print('Error: Environment Variable `METATESTER_DIR` does not exist')
+                    return None
+            if os.path.exists(METATESTER_DIR):
+                MetaTesterPath = os.path.join(METATESTER_DIR, f"MetaTester{inDriverBit}.exe")
+                if os.path.exists(MetaTesterPath):
+                    MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
+                    command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
+                    try:
+                        metatesterLogs = subprocess.check_output(command,
+                                                                 timeout=TimeOutLevel.MEDIUM.value).decode()
+                        if 'Done validation' in metatesterLogs:
+                            return metatesterLogs
+                        else:
+                            print('Error: MetaTester failed to run to completion successfully')
+                            print(f"For more details, "
+                                  f"Check logs: {os.path.join(METATESTER_DIR, MetaTesterLogFileName)}")
+                            return None
+
+                    except subprocess.CalledProcessError as error:
+                        return error.output.decode()
+
+                    except subprocess.TimeoutExpired:
+                        print(f"Error: \"{command}\" could not be executed in "
+                              f"{TimeOutLevel.MEDIUM.value / 60} Minutes!")
+                        return None
+
+                    except Exception as error:
+                        print(f"Error: {error}")
+                        return None
+                else:
+                    print(f"Error: MetaTester{inDriverBit}.exe does not exist in {METATESTER_DIR}")
+                    return None
+            else:
+                print(f"Error: Invalid Path {METATESTER_DIR}")
                 return None
         else:
             print('Error: Invalid Parameters')
@@ -166,15 +176,23 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
-                metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount())
-                if MetaTester.parseLogs(metaTesterLogs, logsPath):
-                    summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Succeed'
-                    summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
-                    print(f"{sourceFilePath}: MetaTester ran to completion successfully")
-                else:
+                MetaTesterPath = os.path.abspath('MetaTester')
+                if not os.path.exists(MetaTesterPath):
+                    MetaTesterPath = None
+                metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
+                                                MetaTesterPath)
+                if metaTesterLogs is None:
                     summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
-                    summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
-                    print(f"{sourceFilePath}: MetaTester reported critical errors")
+                    print(f"{sourceFilePath}: MetaTester failed to initiate")
+                else:
+                    if MetaTester.parseLogs(metaTesterLogs, logsPath):
+                        summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Succeed'
+                        summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                        print(f"{sourceFilePath}: MetaTester ran to completion successfully")
+                    else:
+                        summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
+                        summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                        print(f"{sourceFilePath}: MetaTester reported critical errors")
             else:
                 summary['Plugins'][sourceFilePath] = 'Failed'
         remoteConnection.disconnect()
@@ -182,4 +200,4 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
 
 
 if __name__ == '__main__':
-    main(input(), getpass(), 'input.json')
+    main(sys.argv[0], sys.argv[1], sys.argv[2])
