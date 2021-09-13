@@ -78,10 +78,10 @@ class INIFileTester:
             systemBit = int(platform.architecture()[0][:2])
             try:
                 with winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE) as hkey:
-                    with winreg.OpenKey(hkey, 'Software', 0, winreg.KEY_WRITE) as parentKey:
+                    with winreg.OpenKey(hkey, 'Software', 0, winreg.KEY_READ) as parentKey:
                         if systemBit != inDriverBit:
-                            parentKey = winreg.OpenKey(parentKey, 'Wow6432Node', 0, winreg.KEY_WRITE)
-                        with winreg.OpenKey(parentKey, 'ODBC', 0, winreg.KEY_WRITE) as odbcKey:
+                            parentKey = winreg.OpenKey(parentKey, 'Wow6432Node', 0, winreg.KEY_READ)
+                        with winreg.OpenKey(parentKey, 'ODBC', 0, winreg.KEY_READ) as odbcKey:
                             with winreg.OpenKey(odbcKey, 'ODBC.INI', 0, winreg.KEY_WRITE) as odbcIniKey:
                                 with winreg.CreateKeyEx(odbcIniKey, inTargetKey, 0, winreg.KEY_ALL_ACCESS) as driverKey:
                                     for key, value in inDriverRegistryConfig.items():
