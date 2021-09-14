@@ -40,11 +40,11 @@ class MetaTester:
                     MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
                     print(f"METATESTER_DIR: {METATESTER_DIR}")
-                    with open('exec.bat', 'w') as file:
+                    with open(r'C:\agent\_work\r1\a\_VRathodDev_MetaTesterAutomated\imp.bat', 'w') as file:
                         file.write(f"cd {METATESTER_DIR} \n")
                         file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
                     try:
-                        metatesterLogs = subprocess.check_output(command,
+                        metatesterLogs = subprocess.check_output(r'C:\agent\_work\r1\a\_VRathodDev_MetaTesterAutomated\imp.bat',
                                                                  timeout=TimeOutLevel.MEDIUM.value).decode()
                         print(f"metatesterLogs = {metatesterLogs}")
                         # os.remove('exec.bat')
