@@ -16,7 +16,7 @@ class INIFileTester:
 
     @staticmethod
     def run(inDSN: str, inDriverBit: int, inLogsPath: str, inDriverRegistryConfig: dict,
-            inMetaTesterDir: str = None, inWaitForUserToSetupDSN: bool = False):
+            inMetaTesterDir: str, inWaitForUserToSetupDSN: bool = False):
         """
         Tests if error-messages are correctly accessed using INI File \n
         :param inMetaTesterDir: Path to MetaTester Directory
@@ -27,7 +27,7 @@ class INIFileTester:
         :param inDriverRegistryConfig: Registry Configurations in Key Value pair
         :return: True if succeeded else False
         """
-        if not isNoneOrEmpty(inDSN, inLogsPath):
+        if not isNoneOrEmpty(inDSN, inLogsPath, inMetaTesterDir):
             incorrectDSNConfig = dict()
             correctDSNConfig = dict()
             hadFailure = False
@@ -121,10 +121,10 @@ class INIFileTester:
             return False
 
 
-def main(inUserName: str, inPassword: str, inputFileName: str):
+def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
     userName = inUserName
     password = inPassword
-    inputReader = InputReader(inputFileName)
+    inputReader = InputReader(os.path.join(inBasePath, inputFileName))
     summary = dict()
     remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), userName, password)
     if remoteConnection.connect():
@@ -145,11 +145,9 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"INIFileTestLogs.txt")
-                MetaTesterPath = os.path.abspath('MetaTester')
-                if not os.path.exists(MetaTesterPath):
-                    MetaTesterPath = None
+                MetaTesterPath = os.path.join(inBasePath, 'MetaTester')
                 if INIFileTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(), logsPath,
-                                     pluginInfo.getDataSourceConfiguration(),
+                                     pluginInfo.getDataSourceConfiguration(), MetaTesterPath,
                                      pluginInfo.shouldWaitForUserToSetupDSN()):
                     summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Succeed'
                     summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
@@ -165,4 +163,4 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

@@ -11,7 +11,7 @@ from GenUtility import TimeOutLevel, isNoneOrEmpty, writeInFile
 class MetaTester:
 
     @staticmethod
-    def run(inDSN: str, inDriverBit: int, inMetaTesterDir: str = None):
+    def run(inDSN: str, inDriverBit: int, inMetaTesterDir: str):
         """
         Executes `MetaTester` \n
         :param inMetaTesterDir: Path to MetaTester. If provided, it won't use Environment Variable
@@ -163,10 +163,6 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
                 MetaTesterPath = os.path.join(inBasePath, 'MetaTester')
-                print(f"{inBasePath}: {os.path.exists(inBasePath)}")
-                # if False and not os.path.exists(MetaTesterPath):
-                #     MetaTesterPath = None
-                print(f"MetaTesterPath = {MetaTesterPath}")
                 metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
                                                 MetaTesterPath)
                 if metaTesterLogs is None or len(metaTesterLogs) == 0:
