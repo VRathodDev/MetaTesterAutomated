@@ -20,40 +20,20 @@ class MetaTester:
         :return: Returns Generated Logs during MetaTester if successfully completed else None
         """
         if not isNoneOrEmpty(inDSN) and inDriverBit in [32, 64]:
-            METATESTER_DIR = None
-            if not isNoneOrEmpty(inMetaTesterDir):
-                if True or os.path.exists(inMetaTesterDir):
-                    METATESTER_DIR = os.path.abspath(inMetaTesterDir)
-                else:
-                    print(f"Error: Invalid Path {inMetaTesterDir}")
-                    return None
-            else:
-                if 'METATESTER_DIR' in os.environ:
-                    METATESTER_DIR = os.path.abspath(os.getenv('METATESTER_DIR'))
-                else:
-                    print('Error: Environment Variable `METATESTER_DIR` does not exist')
-                    return None
-            if True or os.path.exists(METATESTER_DIR):
-                MetaTesterPath = os.path.join(METATESTER_DIR, f"MetaTester{inDriverBit}.exe")
-                if True or os.path.exists(MetaTesterPath):
+            if not isNoneOrEmpty(inMetaTesterDir) and os.path.exists(inMetaTesterDir):
+                MetaTesterPath = os.path.join(inMetaTesterDir, f"MetaTester{inDriverBit}.exe")
+                if os.path.exists(MetaTesterPath):
                     MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
-                    print(f"command: {command}")
-                    # print(f"METATESTER_DIR: {METATESTER_DIR}")
-                    # with open(r'C:\agent\_work\r1\a\_VRathodDev_MetaTesterAutomated\imp.bat', 'w') as file:
-                    #     file.write(f"cd {METATESTER_DIR} \n")
-                    #     file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
                     try:
                         metatesterLogs = subprocess.check_output(command,
                                                                  timeout=TimeOutLevel.MEDIUM.value).decode().strip()
-                        print(f"metatesterLogs = {metatesterLogs}")
-                        # os.remove('exec.bat')
                         if 'Done validation' in metatesterLogs:
                             return metatesterLogs
                         else:
                             print('Error: MetaTester failed to run to completion successfully')
                             print(f"For more details, "
-                                  f"Check logs: {os.path.join(METATESTER_DIR, MetaTesterLogFileName)}")
+                                  f"Check logs: {os.path.join(inMetaTesterDir, MetaTesterLogFileName)}")
                             return None
 
                     except subprocess.CalledProcessError as error:
@@ -68,10 +48,10 @@ class MetaTester:
                         print(f"Error: {error}")
                         return None
                 else:
-                    print(f"Error: MetaTester{inDriverBit}.exe does not exist in {METATESTER_DIR}")
+                    print(f"Error: MetaTester{inDriverBit}.exe does not exist in {inMetaTesterDir}")
                     return None
             else:
-                print(f"Error: Invalid Path {METATESTER_DIR}")
+                print(f"Error: Invalid Path {inMetaTesterDir}")
                 return None
         else:
             print('Error: Invalid Parameters')
@@ -126,9 +106,7 @@ class MetaTester:
                             hadFailure = True
                 else:
                     if 'Number of table failures' in currLine:
-                        ans = re.search('Number of table failures: ([0-9]+)', currLine)
-                        totalUnFilteredFailures = int(ans.groups()[0])
-                        currLine = f"Number of table failures: {totalUnFilteredFailures - totalFailures}\n"
+                        currLine = f"Number of table failures: {totalFailures}\n"
                 parsedLogs += currLine + '\n'
 
             writeInFile(parsedLogs, inParsedLogsPath)
