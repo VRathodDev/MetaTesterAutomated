@@ -1,4 +1,5 @@
 import random
+import sys
 import winreg
 import platform
 import re
@@ -15,9 +16,10 @@ class INIFileTester:
 
     @staticmethod
     def run(inDSN: str, inDriverBit: int, inLogsPath: str, inDriverRegistryConfig: dict,
-            inWaitForUserToSetupDSN: bool = False):
+            inMetaTesterDir: str = None, inWaitForUserToSetupDSN: bool = False):
         """
         Tests if error-messages are correctly accessed using INI File \n
+        :param inMetaTesterDir: Path to MetaTester Directory
         :param inWaitForUserToSetupDSN: If True Wait for user to modify DSN Setup
         :param inDSN: Name of the Data Source
         :param inDriverBit: Bit count of Driver
@@ -45,7 +47,7 @@ class INIFileTester:
                 if not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, incorrectDSNConfig):
                     return False
             try:
-                logs = MetaTester.run(inDSN, inDriverBit)
+                logs = MetaTester.run(inDSN, inDriverBit, inMetaTesterDir)
                 writeInFile(logs, inLogsPath)
                 hadFailure = not INIFileTester._parseLogs(logs)
             except Exception as error:
@@ -163,4 +165,4 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
 
 
 if __name__ == '__main__':
-    main(input(), getpass(), 'input.json')
+    main(sys.argv[1], sys.argv[2], sys.argv[3])

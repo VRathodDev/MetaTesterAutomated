@@ -39,6 +39,9 @@ class MetaTester:
                 if os.path.exists(MetaTesterPath):
                     MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
+                    # with open('exec.bat', 'w') as file:
+                    #     file.write(f"cd {inMetaTesterDir}")
+                    #     file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
                     try:
                         metatesterLogs = subprocess.check_output(command,
                                                                  timeout=TimeOutLevel.MEDIUM.value).decode()
@@ -200,4 +203,4 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
 
 
 if __name__ == '__main__':
-    main(sys.argv[0], sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3])

@@ -56,7 +56,7 @@ class Package(ABC):
                         return False
                 return True
             except Exception as error:
-                print(error)
+                print(f"Error: {error}")
                 return False
         else:
             print(f"Error: Given Path {source} is Invalid!")
@@ -103,7 +103,7 @@ class Plugin(Package):
     def getLogsPath(self):
         logsPath = os.path.join(self.getDestinationPath(), 'DriverLogs')
         if os.path.exists(self.getDestinationPath()):
-            if os.path.exists(logsPath) and not os.path.exists(logsPath):
+            if not os.path.exists(logsPath):
                 os.mkdir(logsPath)
             return logsPath
         else:
