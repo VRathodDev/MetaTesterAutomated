@@ -182,8 +182,8 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
                 MetaTesterPath = os.path.abspath('MetaTester')
-                if True or not os.path.exists(MetaTesterPath):
-                    MetaTesterPath = None
+                # if False and not os.path.exists(MetaTesterPath):
+                #     MetaTesterPath = None
                 print(f"MetaTesterPath = {MetaTesterPath}")
                 metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
                                                 MetaTesterPath)
