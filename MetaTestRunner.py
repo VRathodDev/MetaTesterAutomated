@@ -181,7 +181,7 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
-                MetaTesterPath = os.path.abspath('MetaTester')
+                MetaTesterPath = os.path.join(os.path.abspath('_VRathodDev_MetaTesterAutomated'), 'MetaTester')
                 # if False and not os.path.exists(MetaTesterPath):
                 #     MetaTesterPath = None
                 print(f"MetaTesterPath = {MetaTesterPath}")
