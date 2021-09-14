@@ -23,7 +23,7 @@ class MetaTester:
             if not isNoneOrEmpty(inMetaTesterDir) and os.path.exists(inMetaTesterDir):
                 MetaTesterPath = os.path.join(inMetaTesterDir, f"MetaTester{inDriverBit}.exe")
                 if os.path.exists(MetaTesterPath):
-                    MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
+                    MetaTesterLogFileName = os.path.join(inMetaTesterDir, f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt")
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
                     try:
                         metatesterLogs = subprocess.check_output(command,
