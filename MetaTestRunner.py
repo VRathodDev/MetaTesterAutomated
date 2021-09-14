@@ -23,7 +23,7 @@ class MetaTester:
         if not isNoneOrEmpty(inDSN) and inDriverBit in [32, 64]:
             METATESTER_DIR = None
             if not isNoneOrEmpty(inMetaTesterDir):
-                if os.path.exists(inMetaTesterDir):
+                if True or os.path.exists(inMetaTesterDir):
                     METATESTER_DIR = os.path.abspath(inMetaTesterDir)
                 else:
                     print(f"Error: Invalid Path {inMetaTesterDir}")
@@ -34,17 +34,19 @@ class MetaTester:
                 else:
                     print('Error: Environment Variable `METATESTER_DIR` does not exist')
                     return None
-            if os.path.exists(METATESTER_DIR):
+            if True or os.path.exists(METATESTER_DIR):
                 MetaTesterPath = os.path.join(METATESTER_DIR, f"MetaTester{inDriverBit}.exe")
-                if os.path.exists(MetaTesterPath):
+                if True or os.path.exists(MetaTesterPath):
                     MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
-                    # with open('exec.bat', 'w') as file:
-                    #     file.write(f"cd {inMetaTesterDir}")
-                    #     file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
+                    print(f"Command: {command}")
+                    with open('exec.bat', 'w') as file:
+                        file.write(f"cd {METATESTER_DIR} \n")
+                        file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
                     try:
                         metatesterLogs = subprocess.check_output(command,
                                                                  timeout=TimeOutLevel.MEDIUM.value).decode()
+                        os.remove('exec.bat')
                         if 'Done validation' in metatesterLogs:
                             return metatesterLogs
                         else:
@@ -180,8 +182,9 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
                 MetaTesterPath = os.path.abspath('MetaTester')
-                if not os.path.exists(MetaTesterPath):
+                if True or not os.path.exists(MetaTesterPath):
                     MetaTesterPath = None
+                print(f"MetaTesterPath = {MetaTesterPath}")
                 metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
                                                 MetaTesterPath)
                 if metaTesterLogs is None:
