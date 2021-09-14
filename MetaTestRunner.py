@@ -6,7 +6,6 @@ import sys
 from Input import InputReader
 from RemoteConnection import RemoteConnection
 from GenUtility import TimeOutLevel, isNoneOrEmpty, writeInFile
-from getpass import getpass
 
 
 class MetaTester:
@@ -39,13 +38,14 @@ class MetaTester:
                 if True or os.path.exists(MetaTesterPath):
                     MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
-                    print(f"METATESTER_DIR: {METATESTER_DIR}")
-                    with open(r'C:\agent\_work\r1\a\_VRathodDev_MetaTesterAutomated\imp.bat', 'w') as file:
-                        file.write(f"cd {METATESTER_DIR} \n")
-                        file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
+                    print(f"command: {command}")
+                    # print(f"METATESTER_DIR: {METATESTER_DIR}")
+                    # with open(r'C:\agent\_work\r1\a\_VRathodDev_MetaTesterAutomated\imp.bat', 'w') as file:
+                    #     file.write(f"cd {METATESTER_DIR} \n")
+                    #     file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
                     try:
-                        metatesterLogs = subprocess.check_output(r'C:\agent\_work\r1\a\_VRathodDev_MetaTesterAutomated\imp.bat',
-                                                                 timeout=TimeOutLevel.MEDIUM.value).decode()
+                        metatesterLogs = subprocess.check_output(command,
+                                                                 timeout=TimeOutLevel.MEDIUM.value).decode().strip()
                         print(f"metatesterLogs = {metatesterLogs}")
                         # os.remove('exec.bat')
                         if 'Done validation' in metatesterLogs:
@@ -126,7 +126,9 @@ class MetaTester:
                             hadFailure = True
                 else:
                     if 'Number of table failures' in currLine:
-                        currLine = f"Number of table failures: {totalFailures}\n"
+                        ans = re.search('Number of table failures: ([0-9]+)', currLine)
+                        totalUnFilteredFailures = int(ans.groups()[0])
+                        currLine = f"Number of table failures: {totalUnFilteredFailures - totalFailures}\n"
                 parsedLogs += currLine + '\n'
 
             writeInFile(parsedLogs, inParsedLogsPath)
@@ -158,10 +160,10 @@ class MetaTester:
             return False
 
 
-def main(inUserName: str, inPassword: str, inputFileName: str):
+def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
     userName = inUserName
     password = inPassword
-    inputReader = InputReader(inputFileName)
+    inputReader = InputReader(os.path.join(inBasePath, inputFileName))
     summary = dict()
     remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), userName, password)
     if remoteConnection.connect():
@@ -182,7 +184,8 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
-                MetaTesterPath = os.path.join(os.path.abspath('_VRathodDev_MetaTesterAutomated'), 'MetaTester')
+                MetaTesterPath = os.path.join(inBasePath, 'MetaTester')
+                print(f"{inBasePath}: {os.path.exists(inBasePath)}")
                 # if False and not os.path.exists(MetaTesterPath):
                 #     MetaTesterPath = None
                 print(f"MetaTesterPath = {MetaTesterPath}")
@@ -207,4 +210,4 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
