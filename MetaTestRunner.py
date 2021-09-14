@@ -39,14 +39,15 @@ class MetaTester:
                 if True or os.path.exists(MetaTesterPath):
                     MetaTesterLogFileName = f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt"
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
-                    print(f"Command: {command}")
+                    print(f"METATESTER_DIR: {METATESTER_DIR}")
                     with open('exec.bat', 'w') as file:
                         file.write(f"cd {METATESTER_DIR} \n")
                         file.write(f"MetaTester{inDriverBit}.exe -d \"{inDSN}\" -o {MetaTesterLogFileName}")
                     try:
                         metatesterLogs = subprocess.check_output(command,
                                                                  timeout=TimeOutLevel.MEDIUM.value).decode()
-                        os.remove('exec.bat')
+                        print(f"metatesterLogs = {metatesterLogs}")
+                        # os.remove('exec.bat')
                         if 'Done validation' in metatesterLogs:
                             return metatesterLogs
                         else:
@@ -187,7 +188,7 @@ def main(inUserName: str, inPassword: str, inputFileName: str):
                 print(f"MetaTesterPath = {MetaTesterPath}")
                 metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
                                                 MetaTesterPath)
-                if metaTesterLogs is None:
+                if metaTesterLogs is None or len(metaTesterLogs) == 0:
                     summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
                     print(f"{sourceFilePath}: MetaTester failed to initiate")
                 else:
