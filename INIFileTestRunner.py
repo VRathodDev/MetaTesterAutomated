@@ -1,3 +1,4 @@
+import json
 import random
 import sys
 import winreg
@@ -9,7 +10,6 @@ from GenUtility import TimeOutLevel, isNoneOrEmpty, runExecutable, writeInFile
 from Input import InputReader
 from RemoteConnection import RemoteConnection
 from MetaTestRunner import MetaTester
-from getpass import getpass
 
 
 class INIFileTester:
@@ -20,7 +20,7 @@ class INIFileTester:
         """
         Tests if error-messages are correctly accessed using INI File \n
         :param inMetaTesterDir: Path to MetaTester Directory
-        :param inWaitForUserToSetupDSN: If True Wait for user to modify DSN Setup
+        :param inWaitForUserToSetupDSN: If True, Wait for user to modify DSN Setup
         :param inDSN: Name of the Data Source
         :param inDriverBit: Bit count of Driver
         :param inLogsPath: Path to save logs
@@ -36,6 +36,8 @@ class INIFileTester:
                       'Driver would show an Error Message')
                 runExecutable('odbcad32.exe', TimeOutLevel.MEDIUM)
             else:
+                # To set the incorrect DSN Configuration, Initially Host is used and
+                # if it's not available, `UseEncryptedEndpoints` will be used
                 for key, value in inDriverRegistryConfig.items():
                     if key.lower() == 'host':
                         incorrectDSNConfig = {'Host': ''.join(random.sample(list(value), len(value)))}
@@ -107,6 +109,7 @@ class INIFileTester:
             if 'An error occurred while attempting to retrieve the error message for key' not in inLogs:
                 for currLine in inLogs.splitlines():
                     if '*** ODBC Error/Warning:' in currLine:
+                        # Regex pattern to match `[SQLState] [Brand] [Plugin] (ErrorCode) ErrorMessage` sequentially
                         matchedStr = re.match(r'\*\*\* ODBC Error/Warning: \[([A-Z0-9]+)\] '
                                               r'\[([A-Za-z0-9]+)\]\[([A-Za-z0-9]+)\]'
                                               r' \(([0-9]+)\) (.)', currLine)
@@ -122,11 +125,15 @@ class INIFileTester:
 
 
 def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
-    userName = inUserName
-    password = inPassword
+    if isNoneOrEmpty(inUserName, inPassword, inBasePath, inputFileName):
+        print('Error: Invalid Parameter')
+        return False
+    elif not os.path.exists(inBasePath):
+        print(f"Error: Invalid Path {inBasePath}")
+        return False
     inputReader = InputReader(os.path.join(inBasePath, inputFileName))
     summary = dict()
-    remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), userName, password)
+    remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), inUserName, inPassword)
     if remoteConnection.connect():
         coreInfo = inputReader.getCoreInfo()
         if coreInfo.download():
@@ -145,7 +152,7 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"INIFileTestLogs.txt")
-                MetaTesterPath = os.path.join(inBasePath, 'MetaTester')
+                MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
                 if INIFileTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(), logsPath,
                                      pluginInfo.getDataSourceConfiguration(), MetaTesterPath,
                                      pluginInfo.shouldWaitForUserToSetupDSN()):
@@ -153,13 +160,15 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                     summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
                     print(f"{sourceFilePath}: INI File Test ran to completion successfully")
                 else:
-                    summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
-                    summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                    summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Failed'
+                    summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
                     print(f"{sourceFilePath}: INI File Test failed")
             else:
                 summary['Plugins'][sourceFilePath] = 'Failed'
         remoteConnection.disconnect()
-        return summary
+
+        with open(os.path.join(inBasePath), 'INIFileTestSummary.json', 'w') as file:
+            json.dump(summary, file)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import json
 import re
 import os
 import subprocess
@@ -9,6 +10,9 @@ from GenUtility import TimeOutLevel, isNoneOrEmpty, writeInFile
 
 
 class MetaTester:
+
+    # Global Variables
+    MetaTesterDirName = 'MetaTester'
 
     @staticmethod
     def run(inDSN: str, inDriverBit: int, inMetaTesterDir: str):
@@ -142,11 +146,15 @@ class MetaTester:
 
 
 def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
-    userName = inUserName
-    password = inPassword
+    if isNoneOrEmpty(inUserName, inPassword, inBasePath, inputFileName):
+        print('Error: Invalid Parameter')
+        return False
+    elif not os.path.exists(inBasePath):
+        print(f"Error: Invalid Path {inBasePath}")
+        return False
     inputReader = InputReader(os.path.join(inBasePath, inputFileName))
     summary = dict()
-    remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), userName, password)
+    remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), inUserName, inPassword)
     if remoteConnection.connect():
         coreInfo = inputReader.getCoreInfo()
         if coreInfo.download():
@@ -165,7 +173,7 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                 logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
                                                                   f"{pluginInfo.getPackageName()}_"
                                                                   f"MetaTesterLogs.txt")
-                MetaTesterPath = os.path.join(inBasePath, 'MetaTester')
+                MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
                 metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
                                                 MetaTesterPath)
                 if metaTesterLogs is None or len(metaTesterLogs) == 0:
@@ -183,9 +191,10 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
             else:
                 summary['Plugins'][sourceFilePath] = 'Failed'
         remoteConnection.disconnect()
-        return summary
+
+        with open(os.path.join(inBasePath), 'MetaTestSummary.json', 'w') as file:
+            json.dump(summary, file)
 
 
 if __name__ == '__main__':
-    print(__file__)
     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
