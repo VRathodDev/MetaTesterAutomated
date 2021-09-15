@@ -36,7 +36,7 @@
             3. `ForceUpdate` - Set true to download the Package even if it's present on the `DestPath` else false
             4. `Branch` - Branch of Core
             5. `Brand` - Plugin's Brand
-            6. `WaitForUserToSetupDSN` - Set true to manually set up the Data Source Configurations
+            6. `WaitForUserToSetupDSN` - Set true to manually set up the Data Source Configurations. **Do not set it to true while running from Azure.** It would surely fail as Azure does not work in interactive environment.
             7. `DataSourceConfiguration` - Data Source Configuration in key value pair
      
 

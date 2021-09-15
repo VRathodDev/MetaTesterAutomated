@@ -13,7 +13,7 @@
                 "DestPath": "C:\\Memphis_ODBC\\Hubspot\\Hubspot_ODBC_1.6.34.1013_64Bit",
                 "ForceUpdate": false,
                 "Brand": "Microsoft",
-                "WaitForUserToSetupDSN": true,
+                "WaitForUserToSetupDSN": false,
                 "DataSourceConfiguration": {
                     "Description": "Microsoft Hubspot DSN",
                     "Driver": "Microsoft Hubspot ODBC Driver",

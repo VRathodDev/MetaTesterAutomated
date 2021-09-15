@@ -175,7 +175,7 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                     MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
                     metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
                                                     MetaTesterPath)
-                    if not isNoneOrEmpty(metaTesterLogs):
+                    if isNoneOrEmpty(metaTesterLogs):
                         summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
                         print(f"{sourceFilePath}: MetaTester failed to initiate")
                     else:
@@ -191,7 +191,7 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                     summary['Plugins'][sourceFilePath] = 'Failed'
             remoteConnection.disconnect()
 
-            with open(os.path.join(inBasePath), 'MetaTestSummary.json', 'w') as file:
+            with open(os.path.join(inBasePath, 'MetaTestSummary.json'), 'w') as file:
                 json.dump(summary, file)
 
 

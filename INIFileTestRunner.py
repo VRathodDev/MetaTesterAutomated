@@ -182,7 +182,7 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                     summary['Plugins'][sourceFilePath] = 'Failed'
             remoteConnection.disconnect()
 
-            with open(os.path.join(inBasePath), 'INIFileTestSummary.json', 'w') as file:
+            with open(os.path.join(inBasePath, 'INIFileTestSummary.json'), 'w') as file:
                 json.dump(summary, file)
 
 
