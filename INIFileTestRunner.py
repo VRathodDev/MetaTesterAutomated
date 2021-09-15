@@ -34,7 +34,8 @@ class INIFileTester:
             if inWaitForUserToSetupDSN:
                 print('Instruction: Set one of the Connection Property `wrong` such that '
                       'Driver would show an Error Message')
-                runExecutable('odbcad32.exe', TimeOutLevel.MEDIUM)
+                if not runExecutable('odbcad32.exe', TimeOutLevel.MEDIUM):
+                    return False
             else:
                 # To set the incorrect DSN Configuration, Initially Host is used and
                 # if it's not available, `UseEncryptedEndpoints` will be used
@@ -50,20 +51,35 @@ class INIFileTester:
                     return False
             try:
                 logs = MetaTester.run(inDSN, inDriverBit, inMetaTesterDir)
-                writeInFile(logs, inLogsPath)
-                hadFailure = not INIFileTester._parseLogs(logs)
+                if not isNoneOrEmpty(logs):
+                    writeInFile(logs, inLogsPath)
+                    hadFailure = not INIFileTester._parseLogs(logs)
+                else:
+                    print('MetaTester failed to initiate')
+                    return False
             except Exception as error:
                 print(f"Error: {error}")
                 hadFailure = True
             finally:
                 if inWaitForUserToSetupDSN:
                     print('Instruction: Set the Connection Properties to its correct values!')
-                    runExecutable('odbcad32.exe')
+                    if not runExecutable('odbcad32.exe', TimeOutLevel.LOW):
+                        if not isNoneOrEmpty(inDriverRegistryConfig):
+                            if not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit,
+                                                                                      inDriverRegistryConfig):
+                                hadFailure = True
+                        else:
+                            print('Unrecoverable Error: Correct Registry Configuration could not be made for Driver'
+                                  'as User did not responded.')
+                            return False
                 else:
                     if len(correctDSNConfig) > 0:
-                        INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, correctDSNConfig)
+                        if not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, correctDSNConfig):
+                            hadFailure = True
                     else:
-                        INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit, inDriverRegistryConfig)
+                        if not INIFileTester._setupDriverConfigurationsInRegistry(inDSN, inDriverBit,
+                                                                                  inDriverRegistryConfig):
+                            hadFailure = True
                 return not hadFailure
         else:
             print('Error: Invalid Arguments passed')
@@ -127,48 +143,47 @@ class INIFileTester:
 def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
     if isNoneOrEmpty(inUserName, inPassword, inBasePath, inputFileName):
         print('Error: Invalid Parameter')
-        return False
     elif not os.path.exists(inBasePath):
         print(f"Error: Invalid Path {inBasePath}")
-        return False
-    inputReader = InputReader(os.path.join(inBasePath, inputFileName))
-    summary = dict()
-    remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), inUserName, inPassword)
-    if remoteConnection.connect():
-        coreInfo = inputReader.getCoreInfo()
-        if coreInfo.download():
-            summary['CoreSetup'] = 'Succeed'
-        else:
-            summary['CoreSetup'] = 'Failed'
-            return summary
-
-        summary['Plugins'] = dict()
-        for pluginInfo in inputReader.getPluginInfo():
-            sourceFilePath = os.path.abspath(pluginInfo.getSourcePath())
-
-            if pluginInfo.setup(coreInfo):
-                summary['Plugins'][sourceFilePath] = dict()
-                summary['Plugins'][sourceFilePath]['Setup'] = 'Succeed'
-                logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
-                                                                  f"{pluginInfo.getPackageName()}_"
-                                                                  f"INIFileTestLogs.txt")
-                MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
-                if INIFileTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(), logsPath,
-                                     pluginInfo.getDataSourceConfiguration(), MetaTesterPath,
-                                     pluginInfo.shouldWaitForUserToSetupDSN()):
-                    summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Succeed'
-                    summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
-                    print(f"{sourceFilePath}: INI File Test ran to completion successfully")
-                else:
-                    summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Failed'
-                    summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
-                    print(f"{sourceFilePath}: INI File Test failed")
+    else:
+        inputReader = InputReader(os.path.join(inBasePath, inputFileName))
+        summary = dict()
+        remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), inUserName, inPassword)
+        if remoteConnection.connect():
+            coreInfo = inputReader.getCoreInfo()
+            if coreInfo.download():
+                summary['CoreSetup'] = 'Succeed'
             else:
-                summary['Plugins'][sourceFilePath] = 'Failed'
-        remoteConnection.disconnect()
+                summary['CoreSetup'] = 'Failed'
+                return summary
 
-        with open(os.path.join(inBasePath), 'INIFileTestSummary.json', 'w') as file:
-            json.dump(summary, file)
+            summary['Plugins'] = dict()
+            for pluginInfo in inputReader.getPluginInfo():
+                sourceFilePath = os.path.abspath(pluginInfo.getSourcePath())
+
+                if pluginInfo.setup(coreInfo):
+                    summary['Plugins'][sourceFilePath] = dict()
+                    summary['Plugins'][sourceFilePath]['Setup'] = 'Succeed'
+                    logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
+                                                                      f"{pluginInfo.getPackageName()}_"
+                                                                      f"INIFileTestLogs.txt")
+                    MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
+                    if INIFileTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(), logsPath,
+                                         pluginInfo.getDataSourceConfiguration(), MetaTesterPath,
+                                         pluginInfo.shouldWaitForUserToSetupDSN()):
+                        summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Succeed'
+                        summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
+                        print(f"{sourceFilePath}: INI File Test ran to completion successfully")
+                    else:
+                        summary['Plugins'][sourceFilePath]['INIFileTest'] = 'Failed'
+                        summary['Plugins'][sourceFilePath]['INIFileTestLogs'] = logsPath
+                        print(f"{sourceFilePath}: INI File Test failed")
+                else:
+                    summary['Plugins'][sourceFilePath] = 'Failed'
+            remoteConnection.disconnect()
+
+            with open(os.path.join(inBasePath), 'INIFileTestSummary.json', 'w') as file:
+                json.dump(summary, file)
 
 
 if __name__ == '__main__':

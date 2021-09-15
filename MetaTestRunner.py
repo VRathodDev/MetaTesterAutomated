@@ -148,52 +148,51 @@ class MetaTester:
 def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
     if isNoneOrEmpty(inUserName, inPassword, inBasePath, inputFileName):
         print('Error: Invalid Parameter')
-        return False
     elif not os.path.exists(inBasePath):
         print(f"Error: Invalid Path {inBasePath}")
-        return False
-    inputReader = InputReader(os.path.join(inBasePath, inputFileName))
-    summary = dict()
-    remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), inUserName, inPassword)
-    if remoteConnection.connect():
-        coreInfo = inputReader.getCoreInfo()
-        if coreInfo.download():
-            summary['CoreSetup'] = 'Succeed'
-        else:
-            summary['CoreSetup'] = 'Failed'
-            return summary
-
-        summary['Plugins'] = dict()
-        for pluginInfo in inputReader.getPluginInfo():
-            sourceFilePath = os.path.abspath(pluginInfo.getSourcePath())
-
-            if pluginInfo.setup(coreInfo):
-                summary['Plugins'][sourceFilePath] = dict()
-                summary['Plugins'][sourceFilePath]['Setup'] = 'Succeed'
-                logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
-                                                                  f"{pluginInfo.getPackageName()}_"
-                                                                  f"MetaTesterLogs.txt")
-                MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
-                metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
-                                                MetaTesterPath)
-                if metaTesterLogs is None or len(metaTesterLogs) == 0:
-                    summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
-                    print(f"{sourceFilePath}: MetaTester failed to initiate")
-                else:
-                    if MetaTester.parseLogs(metaTesterLogs, logsPath):
-                        summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Succeed'
-                        summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
-                        print(f"{sourceFilePath}: MetaTester ran to completion successfully")
-                    else:
-                        summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
-                        summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
-                        print(f"{sourceFilePath}: MetaTester reported critical errors")
+    else:
+        inputReader = InputReader(os.path.join(inBasePath, inputFileName))
+        summary = dict()
+        remoteConnection = RemoteConnection(inputReader.getRemoteMachineAddress(), inUserName, inPassword)
+        if remoteConnection.connect():
+            coreInfo = inputReader.getCoreInfo()
+            if coreInfo.download():
+                summary['CoreSetup'] = 'Succeed'
             else:
-                summary['Plugins'][sourceFilePath] = 'Failed'
-        remoteConnection.disconnect()
+                summary['CoreSetup'] = 'Failed'
+                return summary
 
-        with open(os.path.join(inBasePath), 'MetaTestSummary.json', 'w') as file:
-            json.dump(summary, file)
+            summary['Plugins'] = dict()
+            for pluginInfo in inputReader.getPluginInfo():
+                sourceFilePath = os.path.abspath(pluginInfo.getSourcePath())
+
+                if pluginInfo.setup(coreInfo):
+                    summary['Plugins'][sourceFilePath] = dict()
+                    summary['Plugins'][sourceFilePath]['Setup'] = 'Succeed'
+                    logsPath = os.path.join(pluginInfo.getLogsPath(), f"{pluginInfo.getPluginBrand()}_"
+                                                                      f"{pluginInfo.getPackageName()}_"
+                                                                      f"MetaTesterLogs.txt")
+                    MetaTesterPath = os.path.join(inBasePath, MetaTester.MetaTesterDirName)
+                    metaTesterLogs = MetaTester.run(pluginInfo.getDataSourceName(), pluginInfo.getPackageBitCount(),
+                                                    MetaTesterPath)
+                    if not isNoneOrEmpty(metaTesterLogs):
+                        summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
+                        print(f"{sourceFilePath}: MetaTester failed to initiate")
+                    else:
+                        if MetaTester.parseLogs(metaTesterLogs, logsPath):
+                            summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Succeed'
+                            summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                            print(f"{sourceFilePath}: MetaTester ran to completion successfully")
+                        else:
+                            summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
+                            summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
+                            print(f"{sourceFilePath}: MetaTester reported critical errors")
+                else:
+                    summary['Plugins'][sourceFilePath] = 'Failed'
+            remoteConnection.disconnect()
+
+            with open(os.path.join(inBasePath), 'MetaTestSummary.json', 'w') as file:
+                json.dump(summary, file)
 
 
 if __name__ == '__main__':

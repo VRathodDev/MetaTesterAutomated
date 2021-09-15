@@ -131,39 +131,44 @@ class Plugin(Package):
                     return False
                 else:
                     dataSourceName = self.getDataSourceName()
+                    try:
+                        with winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE) as hkey:
+                            with winreg.OpenKey(hkey, 'Software', 0, winreg.KEY_READ) as parentKey:
+                                if systemBit != driverBit:
+                                    parentKey = winreg.OpenKey(parentKey, 'Wow6432Node', 0, winreg.KEY_READ)
+                                with winreg.OpenKey(parentKey, 'ODBC', 0, winreg.KEY_READ) as odbcKey:
+                                    with winreg.OpenKey(odbcKey, 'ODBCINST.INI', 0, winreg.KEY_WRITE) as odbcInstIniKey:
+                                        with winreg.CreateKeyEx(odbcInstIniKey, f"{dataSourceName} ODBC Driver",
+                                                                0, winreg.KEY_ALL_ACCESS) as driverKey:
+                                            winreg.SetValueEx(driverKey, 'Description', 0, winreg.REG_SZ,
+                                                              f"{dataSourceName} ODBC Driver")
+                                            winreg.SetValueEx(driverKey, 'Driver', 0, winreg.REG_SZ, inDriverDLLPath)
+                                            winreg.SetValueEx(driverKey, 'Setup', 0, winreg.REG_SZ, inDriverDLLPath)
 
-                    with winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE) as hkey:
-                        with winreg.OpenKey(hkey, 'Software', 0, winreg.KEY_READ) as parentKey:
-                            if systemBit != driverBit:
-                                parentKey = winreg.OpenKey(parentKey, 'Wow6432Node', 0, winreg.KEY_READ)
-                            with winreg.OpenKey(parentKey, 'ODBC', 0, winreg.KEY_READ) as odbcKey:
-                                with winreg.OpenKey(odbcKey, 'ODBCINST.INI', 0, winreg.KEY_WRITE) as odbcInstIniKey:
-                                    with winreg.CreateKeyEx(odbcInstIniKey, f"{dataSourceName} ODBC Driver",
-                                                            0, winreg.KEY_ALL_ACCESS) as driverKey:
-                                        winreg.SetValueEx(driverKey, 'Description', 0, winreg.REG_SZ,
-                                                          f"{dataSourceName} ODBC Driver")
-                                        winreg.SetValueEx(driverKey, 'Driver', 0, winreg.REG_SZ, inDriverDLLPath)
-                                        winreg.SetValueEx(driverKey, 'Setup', 0, winreg.REG_SZ, inDriverDLLPath)
+                                        with winreg.CreateKeyEx(odbcInstIniKey, 'ODBC Drivers', 0,
+                                                                winreg.KEY_ALL_ACCESS) as odbcDriversKey:
+                                            winreg.SetValueEx(odbcDriversKey, f"{dataSourceName} ODBC Driver",
+                                                              0, winreg.REG_SZ, 'Installed')
 
-                                    with winreg.CreateKeyEx(odbcInstIniKey, 'ODBC Drivers', 0,
-                                                            winreg.KEY_ALL_ACCESS) as odbcDriversKey:
-                                        winreg.SetValueEx(odbcDriversKey, f"{dataSourceName} ODBC Driver",
-                                                          0, winreg.REG_SZ, 'Installed')
+                                    with winreg.OpenKey(odbcKey, 'ODBC.INI', 0, winreg.KEY_WRITE) as odbcIniKey:
+                                        with winreg.CreateKeyEx(odbcIniKey, 'ODBC Data Sources', 0,
+                                                                winreg.KEY_WRITE) as odbcDSkey:
+                                            winreg.SetValueEx(odbcDSkey, f"{dataSourceName}",
+                                                              0, winreg.REG_SZ, f"{dataSourceName} ODBC Driver")
 
-                                with winreg.OpenKey(odbcKey, 'ODBC.INI', 0, winreg.KEY_WRITE) as odbcIniKey:
-                                    with winreg.CreateKeyEx(odbcIniKey, 'ODBC Data Sources', 0,
-                                                            winreg.KEY_WRITE) as odbcDSkey:
-                                        winreg.SetValueEx(odbcDSkey, f"{dataSourceName}",
-                                                          0, winreg.REG_SZ, f"{dataSourceName} ODBC Driver")
+                                        if self.shouldWaitForUserToSetupDSN():
+                                            print(f"Provide Required Configurations for {dataSourceName} DSN")
+                                            if not runExecutable('odbcad32.exe'):
+                                                return False
+                                        else:
+                                            with winreg.CreateKeyEx(odbcIniKey, f"{dataSourceName}", 0,
+                                                                    winreg.KEY_WRITE) as driverKey:
+                                                for key, value in self.getDataSourceConfiguration().items():
+                                                    winreg.SetValueEx(driverKey, key, 0, winreg.REG_SZ, value)
+                    except Exception as error:
+                        print(f"Error: {error}")
+                        return False
 
-                                    if self.shouldWaitForUserToSetupDSN():
-                                        print(f"Provide Required Configurations for {dataSourceName} DSN")
-                                        runExecutable('odbcad32.exe')
-                                    else:
-                                        with winreg.CreateKeyEx(odbcIniKey, f"{dataSourceName}", 0,
-                                                                winreg.KEY_WRITE) as driverKey:
-                                            for key, value in self.getDataSourceConfiguration().items():
-                                                winreg.SetValueEx(driverKey, key, 0, winreg.REG_SZ, value)
                     return True
             else:
                 print('Error: This function supports only 32 & 64 Drivers')
