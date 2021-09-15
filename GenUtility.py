@@ -56,7 +56,7 @@ def runExecutable(inCommands: str, inTimeOut: TimeOutLevel = TimeOutLevel.MEDIUM
         with open('exec.bat', 'w') as file:
             file.write(inCommands)
         try:
-            subprocess.call('exec.bat', timeout=inTimeOut.value)
+            subprocess.run('exec.bat', timeout=inTimeOut.value)
         except subprocess.TimeoutExpired:
             print(f"Error: {inCommands} could not be executed in {inTimeOut.value/60} Minutes!")
             return False
