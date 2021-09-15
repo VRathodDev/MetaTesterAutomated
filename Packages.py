@@ -101,6 +101,7 @@ class Plugin(Package):
         return self.__mDataSourceConfiguration
 
     def getLogsPath(self):
+        """Returns the path to `DriverLogs` folder to save the logs generated during various tests"""
         logsPath = os.path.join(self.getDestinationPath(), 'DriverLogs')
         if os.path.exists(self.getDestinationPath()):
             if not os.path.exists(logsPath):
@@ -111,6 +112,11 @@ class Plugin(Package):
             return None
 
     def __setRegistryConfigurations(self, inDriverDLLPath: str):
+        """
+        Writes Driver's registry configurations \n
+        :param inDriverDLLPath: Driver's DLL Path from Plugin Package
+        :return: True if succeeded else False
+        """
         if not isNoneOrEmpty(inDriverDLLPath):
             driverBit = self.getPackageBitCount()
             if driverBit in [32, 64]:
@@ -167,6 +173,12 @@ class Plugin(Package):
             return False
 
     def setup(self, inCoreInfo: Core):
+        """
+        Sets up the Plugin package with required `ThirdParty` & `Core` Package files
+        and writes provided driver registry configurations\n
+        :param inCoreInfo: Core's information
+        :return: True if succeeded else False
+        """
         if self.download() and inCoreInfo.download():
             brand = self.getPluginBrand()
             extractedPluginPath = self.getDestinationPath()

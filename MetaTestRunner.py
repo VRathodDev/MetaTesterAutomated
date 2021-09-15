@@ -14,15 +14,17 @@ class MetaTester:
     def run(inDSN: str, inDriverBit: int, inMetaTesterDir: str):
         """
         Executes `MetaTester` \n
-        :param inMetaTesterDir: Path to MetaTester. If provided, it won't use Environment Variable
+        :param inMetaTesterDir: Path to MetaTester.
         :param inDSN: Name of the Data Source
         :param inDriverBit: Bit count of Driver
-        :return: Returns Generated Logs during MetaTester if successfully completed else None
+        :return: Returns the Generated Logs during MetaTester Execution if successfully completed else None
         """
         if not isNoneOrEmpty(inDSN) and inDriverBit in [32, 64]:
             if not isNoneOrEmpty(inMetaTesterDir) and os.path.exists(inMetaTesterDir):
                 MetaTesterPath = os.path.join(inMetaTesterDir, f"MetaTester{inDriverBit}.exe")
                 if os.path.exists(MetaTesterPath):
+                    # To generate the MetaTest logs in the `MetaTester` directory
+                    # else Logs are generated at inappropriate location
                     MetaTesterLogFileName = os.path.join(inMetaTesterDir, f"{inDSN.replace(' ', '_')}_MetaTesterLogs.txt")
                     command = f"{MetaTesterPath} -d \"{inDSN}\" -o {MetaTesterLogFileName}"
                     try:
@@ -33,7 +35,7 @@ class MetaTester:
                         else:
                             print('Error: MetaTester failed to run to completion successfully')
                             print(f"For more details, "
-                                  f"Check logs: {os.path.join(inMetaTesterDir, MetaTesterLogFileName)}")
+                                  f"Check logs: {MetaTesterLogFileName}")
                             return None
 
                     except subprocess.CalledProcessError as error:
@@ -58,16 +60,16 @@ class MetaTester:
             return None
 
     @staticmethod
-    def parseLogs(inLogs: str, inParsedLogsPath: str):
+    def parseLogs(inLogs: str, inParsedLogFilePath: str):
         """
         Parses the `MetaTester` generated Logs\n
         :param inLogs: `MetaTester` generated Logs
-        :param inParsedLogsPath: Path to save the parsed Logs including the Log File Name
+        :param inParsedLogFilePath: Path to save the parsed Logs including the Log File Name
         :return: True if succeeded else False
         """
-        if not isNoneOrEmpty(inLogs, inParsedLogsPath):
-            if not inParsedLogsPath.endswith('.txt'):
-                print(f"Error: {inParsedLogsPath} must contain Log File Name with `.txt` File Extension. "
+        if not isNoneOrEmpty(inLogs, inParsedLogFilePath):
+            if not inParsedLogFilePath.endswith('.txt'):
+                print(f"Error: {inParsedLogFilePath} must contain Log File Name with `.txt` File Extension. "
                       f"i.e `Z:fakepath/log_file.txt")
                 return False
             startChecking = False
@@ -106,10 +108,11 @@ class MetaTester:
                             hadFailure = True
                 else:
                     if 'Number of table failures' in currLine:
+                        # Writes the failures count after filtration of checked ignorable Mismatches
                         currLine = f"Number of table failures: {totalFailures}\n"
                 parsedLogs += currLine + '\n'
 
-            writeInFile(parsedLogs, inParsedLogsPath)
+            writeInFile(parsedLogs, inParsedLogFilePath)
             return not hadFailure
         else:
             print('Error: Invalid Parameter')
@@ -184,4 +187,5 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
 
 
 if __name__ == '__main__':
+    print(__file__)
     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

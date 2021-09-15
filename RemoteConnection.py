@@ -22,6 +22,7 @@ class RemoteConnection:
             except Exception as error:
                 if isinstance(error, win32wnet.error):
                     if 1219 in error.args:
+                        # Disconnects from existing connection if any & tried to connect again
                         win32wnet.WNetCancelConnection2(unc, 0, 0)
                         return self.connect()
                     elif 1326 in error.args:
