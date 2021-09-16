@@ -7,6 +7,7 @@ import sys
 from Input import InputReader
 from RemoteConnection import RemoteConnection
 from GenUtility import TimeOutLevel, isNoneOrEmpty, writeInFile
+from ScalabilityTestRunner import ScalabilityTestRunner
 
 
 class MetaTester:
@@ -187,6 +188,11 @@ def main(inUserName: str, inPassword: str, inBasePath: str, inputFileName: str):
                             summary['Plugins'][sourceFilePath]['MetaDataTest'] = 'Failed'
                             summary['Plugins'][sourceFilePath]['MetaDataTestLogs'] = logsPath
                             print(f"{sourceFilePath}: MetaTester reported critical errors")
+
+                    ScalabilityTestRunner(os.path.join(inBasePath, 'ScalabilityTester.exe'),
+                                          pluginInfo.getDestinationPath(),
+                                          os.path.join(pluginInfo.getLogsPath(), pluginInfo.getPackageName()) + '\\',
+                                          'dsn=' + pluginInfo.getDataSourceName()).start(inBasePath)
                 else:
                     summary['Plugins'][sourceFilePath] = 'Failed'
             remoteConnection.disconnect()
